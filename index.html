@@ -104,7 +104,7 @@
   </div>
 
   <p class="headline" id="headline">
-    Of everyone who tests <b>positive</b>, only <b id="ppv">–%</b> actually have the condition — even with a <b>95%</b> sensitive test, when the condition is rare, most positives are false alarms.
+    Of everyone who tests <b>positive</b>, only <b id="ppv">–%</b> actually have the condition<span id="ppv-tail"> — even with a 95% sensitive test, when the condition is rare, most positives are false alarms.</span>
   </p>
 </div>
 
@@ -154,10 +154,9 @@
 
     const ppv = TP / (TP + FP) * 100;
     document.getElementById('ppv').textContent = fmt(ppv);
-    document.getElementById('headline').innerHTML =
-      `Of everyone who tests <b>positive</b>, only <b>${fmt(ppv)}</b> actually have the condition` +
-      (ppv < 50 ? ' — with a rare condition, most positives turn out to be false alarms.'
-                : ' — at this prevalence, a positive result is fairly trustworthy.');
+    document.getElementById('ppv-tail').textContent =
+      ppv < 50 ? ' — with a rare condition, most positives turn out to be false alarms.'
+               : ' — at this prevalence, a positive result is fairly trustworthy.';
   }
 
   [sensSlider, specSlider, prevSlider].forEach(s => s.addEventListener('input', update));

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sensitivity · Specificity · Prevalence — Chalkboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <filter id="chalk-rough">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" result="noise" seed="7"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.6"/>
+  </filter>
+</svg>
+
+<div class="frame">
+  <p class="eyebrow">a chalkboard on Bayes' theorem</p>
+
+  <div class="equation">
+    <span class="eq-term">P(Cov|+) =</span>
+    <span class="frac">
+      <span class="num">P(+|Cov) P(Cov)</span>
+      <span class="den">P(+)</span>
+    </span>
+    <span class="eq-term">=</span>
+    <span class="frac">
+      <span class="num">P(+|Cov) P(Cov)</span>
+      <span class="den">P(+|Cov) P(Cov) + P(+|DF) P(DF)</span>
+    </span>
+  </div>
+
+  <h1>Sensitivity, Specificity &amp; Prevalence</h1>
+
+  <div class="stats-row">
+    <div class="stat">
+      <span class="stat-label">Sensitivity</span>
+      <div class="chalk-box"><span id="sensVal">95</span>%</div>
+      <input type="range" id="sensSlider" min="1" max="100" value="95">
+    </div>
+    <div class="stat">
+      <span class="stat-label">Specificity</span>
+      <div class="chalk-box"><span id="specVal">99</span>%</div>
+      <input type="range" id="specSlider" min="1" max="100" value="99">
+    </div>
+    <div class="stat prev">
+      <span class="stat-label">Prevalence</span>
+      <div class="chalk-box"><span id="prevVal">1</span>%</div>
+      <input type="range" id="prevSlider" min="1" max="100" value="1">
+    </div>
+  </div>
+
+  <div class="chart-wrap">
+    <div class="y-label">Percentage</div>
+    <div class="chart-axis-area">
+      <div class="y-axis-line"></div>
+      <div class="plot" id="plot">
+        <div class="bar-col">
+          <div class="bar-value" id="v-tp">–</div>
+          <div class="bar" id="bar-tp"></div>
+          <div class="bar-tag">P(Cov|+)<br>True Positive</div>
+        </div>
+        <div class="bar-col"> 
+          <div class="bar-value" id="v-fp">–</div>
+          <div class="bar" id="bar-fp"></div>
+          <div class="bar-tag">P(DF|+)<br>False Positive</div>
+        </div>
+        <div class="bar-col">
+          <div class="bar-value" id="v-fn">–</div>
+          <div class="bar" id="bar-fn"></div>
+          <div class="bar-tag">P(Cov|-)<br>False Negative</div>
+        </div>
+        <div class="bar-col">
+          <div class="bar-value" id="v-tn">–</div>
+          <div class="bar" id="bar-tn"></div>
+          <div class="bar-tag">P(DF|-)<br>True Negative</div>
+        </div>
+      </div>
+      <div class="x-axis-line"></div>
+    </div>
+  </div>
+  <div class="x-label">Probabilities</div>
+
+  <div class="matrix">
+    <div class="cell">
+      <span class="pct" id="vl-tp"></span>
+      <span class="desc">TP</span>
+    </div>
+    <div class="cell">
+      <span class="pct" id="vl-fn"></span>
+      <span class="desc">FN</span>
+    </div>
+    <div class="cell">
+      <span class="pct" id="vl-fp"></span>
+      <span class="desc">FP</span>
+    </div>
+    <div class="cell">
+      <span class="pct" id="vl-tn"></span>
+      <span class="desc">TN</span>
+    </div>
+  </div>
+
+  <p class="headline" id="headline">
+    Of everyone who tests <b>positive</b>, only <b id="ppv">–%</b> actually have the condition — even with a <b>95%</b> sensitive test, when the condition is rare, most positives are false alarms.
+  </p>
+</div>
+
+<script>
+  const sensSlider = document.getElementById('sensSlider');
+  const specSlider = document.getElementById('specSlider');
+  const prevSlider = document.getElementById('prevSlider');
+
+  const sensVal = document.getElementById('sensVal');
+  const specVal = document.getElementById('specVal');
+  const prevVal = document.getElementById('prevVal');
+
+  const maxBarPx = 200;
+
+  function fmt(n){
+    return (Math.round(n*10)/10).toString().replace(/\.0$/,'') + '%';
+  }
+
+  function update(){
+    const S  = (+sensSlider.value) / 100;   // sensitivity
+    const Sp = (+specSlider.value) / 100;   // specificity
+    const P  = (+prevSlider.value) / 100;   // prevalence
+
+    sensVal.textContent = sensSlider.value;
+    specVal.textContent = specSlider.value;
+    prevVal.textContent = prevSlider.value;
+
+    const TP = ((S*P) / ((S * P) + ((1-Sp) * (1 - P)))) * 100;
+    const FP = (((1-Sp) * (1 - P)) / ((S * P) + ((1-Sp) * (1 - P)))) * 100;
+    const FN = ( ((1-S) * P) / ( ((1-S) * P) + (Sp * (1 - P))) ) * 100;
+    const TN = ( (Sp * (1 - P)) / ( ((1-S) * P) + (Sp * (1 - P))) ) * 100;
+
+    const maxV = Math.max(TP, FP, FN, TN, 0.001);
+
+    const bars = [
+      ['tp', TP], ['fp', FP], ['fn', FN], ['tn', TN]
+    ];
+    bars.forEach(([key, val]) => {
+      document.getElementById('bar-' + key).style.height = Math.max(4, (val / maxV) * maxBarPx) + 'px';
+      document.getElementById('v-' + key).textContent = fmt(val);
+    });
+
+    document.getElementById('vl-tp').textContent = fmt(TP);
+    document.getElementById('vl-fn').textContent = fmt(FN);
+    document.getElementById('vl-fp').textContent = fmt(FP);
+    document.getElementById('vl-tn').textContent = fmt(TN);
+
+    const ppv = TP / (TP + FP) * 100;
+    document.getElementById('ppv').textContent = fmt(ppv);
+    document.getElementById('headline').innerHTML =
+      `Of everyone who tests <b>positive</b>, only <b>${fmt(ppv)}</b> actually have the condition` +
+      (ppv < 50 ? ' — with a rare condition, most positives turn out to be false alarms.'
+                : ' — at this prevalence, a positive result is fairly trustworthy.');
+  }
+
+  [sensSlider, specSlider, prevSlider].forEach(s => s.addEventListener('input', update));
+  update();
+</script>
+
+</body>
+</html>
